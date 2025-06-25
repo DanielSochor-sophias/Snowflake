@@ -1,0 +1,62 @@
+-------------------------------------CREATE TABLE 1 and load file 1------------------------------------------
+use database indatawetrust;
+use schema public;
+
+create table Customer (
+    id INT PRIMARY KEY,
+    name VARCHAR(50),
+    last_name VARCHAR(50)
+);
+
+INSERT INTO Customer (id, name, last_name)
+VALUES
+(1, 'Daniel', 'Sochor'),
+(2, 'Michal', 'Vitoušek'),
+(3, 'Martin', 'Šafránek');
+
+select * from INDATAWETRUST.PUBLIC.CUSTOMER;
+
+-------------------------------------CREATE TABLE 1 VIEW------------------------------------------------------
+--- NVL funcion: NVL( <expr1> , <expr2> ) --- If expr1 is NULL, returns expr2, otherwise returns expr1.
+create or replace view customer_view as
+    select
+    id,
+    name,
+    last_name,
+    CAST(SHA2_BINARY(NVL(CAST(id AS VARCHAR),'NULL')) AS BINARY(40)) AS hash_key,
+    CAST(SHA2_BINARY(NVL(CAST(name AS VARCHAR),'NULL') ||'||'|| NVL(CAST(last_name AS VARCHAR),'NULL')) AS BINARY(40)) AS hash_diff
+from INDATAWETRUST.PUBLIC.CUSTOMER;
+
+select * from INDATAWETRUST.PUBLIC.CUSTOMER_VIEW;
+
+
+-------------------------------CREATE TABLE 2 AND MERGE FROM TABLE 1_VIEW TO TABLE 2---------------------------
+create table customer_hashed (
+    id INT PRIMARY KEY,
+    name VARCHAR(50),
+    last_name VARCHAR(50),
+    hash_key BINARY(40),
+    hash_diff BINARY(40)
+);
+
+MERGE INTO INDATAWETRUST.PUBLIC.CUSTOMER_HASHED AS target
+USING INDATAWETRUST.PUBLIC.CUSTOMER_VIEW AS source
+ON target.hash_key = source.hash_key
+WHEN MATCHED AND target.hash_diff <> source.hash_diff THEN
+    UPDATE SET
+        name = source.name,
+        last_name = source.last_name
+WHEN NOT MATCHED THEN
+    INSERT (id, name, last_name, hash_key, hash_diff)
+    VALUES (source.id, source.name, source.last_name, source.hash_key, source.hash_diff);
+
+select * from indatawetrust.public.customer_hashed;
+
+
+-----------------------------TRUNCATE TABLE 1 AND LOAD 2nd file TO TABLE 1--------------------------------------
+truncate table indatawetrust.public.customer;
+INSERT INTO customer (id, name, last_name)
+VALUES
+(1, 'Daniel', 'Sochor'),
+(2, 'Michal', 'Schweidler'),
+(4, 'Zuzana', 'Šimková');
