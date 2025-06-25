@@ -1,3 +1,7 @@
+--- ******** Hash Keys and Hash Diffs used for Data Vault ******** ---
+--- https://wetrustindata.com/data_vault_with_snowflake/ ---
+
+
 -------------------------------------CREATE TABLE 1 and load file 1------------------------------------------
 use database indatawetrust;
 use schema public;
